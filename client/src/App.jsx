@@ -6,6 +6,8 @@ import UserLayout from "./layouts/userLayout";
 import AdminLayout from "./layouts/adminLayout";
 import Loader from "./components/loader";
 
+const Contact = lazy(() => import("./pages/contact"));
+const About = lazy(() => import("./pages/about"));
 const Home = lazy(() => import("./pages/home"));
 const Shop = lazy(() => import("./pages/shop"));
 const UserProductDetail = lazy(() => import("./pages/userProjectDetail"));
@@ -44,6 +46,8 @@ function App() {
             <Route path="/shop" element={<Shop />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<About />} />
             <Route path="/access-denied" element={<AccessDenied />} />
 
             {/* Protected User Routes */}

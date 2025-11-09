@@ -81,7 +81,7 @@ export const removeFromCart = createAsyncThunk(
 
 export const clearCart = createAsyncThunk(
   "cart/clearCart",
-  async ({ token }, { rejectWithValue, getState }) => {
+  async ({ token }, { rejectWithValue }) => {
     try {
       const { data } = await axios.delete(`${API_URL}/clear`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -105,6 +105,31 @@ const initialState = {
   loading: false,
   success: false,
   error: null,
+};
+
+const calculateCartTotalsLocal = (cart) => {
+  let subtotal = 0;
+  let totalQuantity = 0;
+
+  cart.forEach((item) => {
+    const productPrice = item.product?.salePrice || item.product?.price || 0;
+    const quantity = item.quantity || 1;
+    subtotal += productPrice * quantity;
+    totalQuantity += quantity;
+  });
+
+  const taxRate = 0.18;
+  const taxAmount = subtotal * taxRate;
+  const shippingFee = subtotal > 1000 ? 0 : 50;
+  const totalAmount = subtotal + taxAmount + shippingFee;
+
+  return {
+    subtotal,
+    taxAmount,
+    shippingFee,
+    totalAmount,
+    totalQuantity,
+  };
 };
 
 const cartSlice = createSlice({
@@ -140,10 +165,13 @@ const cartSlice = createSlice({
       const item = state.cart.find((item) => item.product._id === productId);
       if (item && item.quantity > 1) {
         item.quantity -= 1;
-        // Recalculate totals locally
         const totals = calculateCartTotalsLocal(state.cart);
         Object.assign(state, totals);
       }
+    },
+    updateLocalCartTotals: (state) => {
+      const totals = calculateCartTotalsLocal(state.cart);
+      Object.assign(state, totals);
     },
   },
   extraReducers: (builder) => {
@@ -160,6 +188,7 @@ const cartSlice = createSlice({
         state.shippingFee = action.payload.shippingFee || 0;
         state.totalAmount = action.payload.totalAmount || 0;
         state.totalQuantity = action.payload.totalQuantity || 0;
+        state.error = null;
       })
       .addCase(fetchCart.rejected, (state, action) => {
         state.loading = false;
@@ -168,6 +197,7 @@ const cartSlice = createSlice({
 
       .addCase(addToCart.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(addToCart.fulfilled, (state, action) => {
         state.loading = false;
@@ -178,14 +208,17 @@ const cartSlice = createSlice({
         state.shippingFee = action.payload.shippingFee || 0;
         state.totalAmount = action.payload.totalAmount || 0;
         state.totalQuantity = action.payload.totalQuantity || 0;
+        state.error = null;
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
       })
 
       .addCase(updateCartItem.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(updateCartItem.fulfilled, (state, action) => {
         state.loading = false;
@@ -196,14 +229,17 @@ const cartSlice = createSlice({
         state.shippingFee = action.payload.shippingFee || 0;
         state.totalAmount = action.payload.totalAmount || 0;
         state.totalQuantity = action.payload.totalQuantity || 0;
+        state.error = null;
       })
       .addCase(updateCartItem.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
       })
 
       .addCase(removeFromCart.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(removeFromCart.fulfilled, (state, action) => {
         state.loading = false;
@@ -214,14 +250,17 @@ const cartSlice = createSlice({
         state.shippingFee = action.payload.shippingFee || 0;
         state.totalAmount = action.payload.totalAmount || 0;
         state.totalQuantity = action.payload.totalQuantity || 0;
+        state.error = null;
       })
       .addCase(removeFromCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
       })
 
       .addCase(clearCart.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(clearCart.fulfilled, (state) => {
         state.loading = false;
@@ -232,43 +271,21 @@ const cartSlice = createSlice({
         state.shippingFee = 0;
         state.totalAmount = 0;
         state.totalQuantity = 0;
+        state.error = null;
       })
       .addCase(clearCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
       });
   },
 });
-
-const calculateCartTotalsLocal = (cart) => {
-  let subtotal = 0;
-  let totalQuantity = 0;
-
-  cart.forEach((item) => {
-    const productPrice = item.product?.price || 0;
-    const quantity = item.quantity || 1;
-    subtotal += productPrice * quantity;
-    totalQuantity += quantity;
-  });
-
-  const taxRate = 0.18;
-  const taxAmount = subtotal * taxRate;
-  const shippingFee = subtotal > 1000 ? 0 : 50;
-  const totalAmount = subtotal + taxAmount + shippingFee;
-
-  return {
-    subtotal,
-    taxAmount,
-    shippingFee,
-    totalAmount,
-    totalQuantity,
-  };
-};
 
 export const {
   resetStatus,
   clearCartState,
   incrementQuantity,
   decrementQuantity,
+  updateLocalCartTotals,
 } = cartSlice.actions;
 export default cartSlice.reducer;

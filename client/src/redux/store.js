@@ -9,6 +9,7 @@ import wishlistReducer from "./slices/wishlistSlice";
 import cartReducer from "./slices/cartSlice";
 import paymentReducer from "./slices/paymentSlice";
 import orderReducer from "./slices/orderSlice";
+import addressReducer from "./slices/addressSlice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -19,6 +20,7 @@ const rootReducer = combineReducers({
   cart: cartReducer,
   payment: paymentReducer,
   order: orderReducer,
+  address: addressReducer,
 });
 
 const persistConfig = {

@@ -6,13 +6,22 @@ const API_URL = "http://localhost:5000/api/v1/category";
 export const fetchCategories = createAsyncThunk(
   "category/fetchAll",
   async (
-    { search = "", sortBy = "createdAt", order = "desc", page = 1, limit = 10 },
+    {
+      search = "",
+      sortBy = "createdAt",
+      order = "desc",
+      page = 1,
+      limit = 10,
+      parent = null,
+    },
     { rejectWithValue }
   ) => {
     try {
-      const { data } = await axios.get(
-        `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`
-      );
+      let url = `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
+      if (parent !== null) {
+        url += `&parent=${parent}`;
+      }
+      const { data } = await axios.get(url);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -36,12 +45,29 @@ export const getCategoryById = createAsyncThunk(
   }
 );
 
+export const getCategoryBySlug = createAsyncThunk(
+  "category/fetchBySlug",
+  async ({ slug }, { rejectWithValue }) => {
+    try {
+      const { data } = await axios.get(`${API_URL}/slug/${slug}`);
+      return data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Category not found"
+      );
+    }
+  }
+);
+
 export const addCategory = createAsyncThunk(
   "category/add",
-  async ({ token, data }, { rejectWithValue }) => {
+  async ({ token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(API_URL, data, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.post(API_URL, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
       return res.data;
     } catch (err) {
@@ -54,10 +80,13 @@ export const addCategory = createAsyncThunk(
 
 export const updateCategory = createAsyncThunk(
   "category/update",
-  async ({ id, token, data }, { rejectWithValue }) => {
+  async ({ id, token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/${id}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.put(`${API_URL}/${id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
       return res.data;
     } catch (err) {
@@ -94,6 +123,7 @@ const initialState = {
   sortBy: "createdAt",
   order: "desc",
   limit: 10,
+  parent: null,
   loading: false,
   categoryLoading: false,
   success: false,
@@ -114,9 +144,15 @@ const categorySlice = createSlice({
     setPage: (state, action) => {
       state.page = action.payload;
     },
+    setParent: (state, action) => {
+      state.parent = action.payload;
+    },
     resetStatus: (state) => {
       state.success = false;
       state.error = null;
+    },
+    clearCategory: (state) => {
+      state.category = null;
     },
   },
   extraReducers: (builder) => {
@@ -151,6 +187,11 @@ const categorySlice = createSlice({
         state.error = action.payload;
       })
 
+      // Get by Slug
+      .addCase(getCategoryBySlug.fulfilled, (state, action) => {
+        state.category = action.payload.category;
+      })
+
       // Add
       .addCase(addCategory.pending, (state) => {
         state.loading = true;
@@ -158,7 +199,7 @@ const categorySlice = createSlice({
       .addCase(addCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
-        if (state.page === 1) state.categories.unshift(action.payload.category);
+        state.categories.unshift(action.payload.category);
       })
       .addCase(addCategory.rejected, (state, action) => {
         state.loading = false;
@@ -176,6 +217,9 @@ const categorySlice = createSlice({
         state.categories = state.categories.map((c) =>
           c._id === updated._id ? updated : c
         );
+        if (state.category && state.category._id === updated._id) {
+          state.category = updated;
+        }
       })
       .addCase(updateCategory.rejected, (state, action) => {
         state.loading = false;
@@ -192,6 +236,9 @@ const categorySlice = createSlice({
         state.categories = state.categories.filter(
           (c) => c._id !== action.payload.id
         );
+        if (state.category && state.category._id === action.payload.id) {
+          state.category = null;
+        }
       })
       .addCase(deleteCategory.rejected, (state, action) => {
         state.loading = false;
@@ -200,6 +247,12 @@ const categorySlice = createSlice({
   },
 });
 
-export const { setSearch, setPage, setSort, resetStatus } =
-  categorySlice.actions;
+export const {
+  setSearch,
+  setPage,
+  setSort,
+  setParent,
+  resetStatus,
+  clearCategory,
+} = categorySlice.actions;
 export default categorySlice.reducer;

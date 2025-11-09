@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
   FaArrowLeft,
@@ -9,6 +9,12 @@ import {
   FaTruck,
   FaCreditCard,
   FaBox,
+  FaRupeeSign,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaEnvelope,
+  FaUser,
+  FaShippingFast,
 } from "react-icons/fa";
 import { cancelOrder } from "../redux/slices/paymentSlice";
 import Loader from "../components/loader";
@@ -24,7 +30,9 @@ const OrderDetail = () => {
   const { order } = useSelector((state) => state.order);
 
   useEffect(() => {
-    dispatch(getOrderById({ token, orderId }));
+    if (token && orderId) {
+      dispatch(getOrderById({ token, orderId }));
+    }
   }, [dispatch, token, orderId]);
 
   const handleCancelOrder = async () => {
@@ -42,6 +50,7 @@ const OrderDetail = () => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "completed":
+      case "delivered":
         return "bg-green-100 text-green-800 border-green-200";
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
@@ -59,6 +68,7 @@ const OrderDetail = () => {
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
       case "completed":
+      case "delivered":
         return <FaCheckCircle className="text-green-500" />;
       case "pending":
         return <FaClock className="text-yellow-500" />;
@@ -81,6 +91,10 @@ const OrderDetail = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const calculateItemTotal = (item) => {
+    return (item.price || 0) * (item.quantity || 1);
   };
 
   if (loading) {
@@ -130,7 +144,7 @@ const OrderDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
@@ -144,9 +158,9 @@ const OrderDetail = () => {
           <div className="w-24"></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-3 space-y-6">
             {/* Order Summary */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
@@ -158,7 +172,7 @@ const OrderDetail = () => {
                     Placed on {formatDate(order.createdAt)}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <span
                     className={`flex items-center gap-2 px-3 py-1 rounded text-sm font-medium border ${getStatusColor(
                       order.orderStatus
@@ -168,8 +182,9 @@ const OrderDetail = () => {
                     {order.orderStatus?.charAt(0).toUpperCase() +
                       order.orderStatus?.slice(1)}
                   </span>
-                  <p className="text-xl font-bold text-blue-600">
-                    ${order.totalAmount}
+                  <p className="text-xl font-bold text-blue-600 flex items-center">
+                    <FaRupeeSign size={18} />
+                    {order.totalAmount?.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -178,7 +193,7 @@ const OrderDetail = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                   <FaBox />
-                  Order Items
+                  Order Items ({order.orderItems?.length || 0})
                 </h3>
                 {order.orderItems?.map((item, index) => (
                   <div
@@ -186,28 +201,77 @@ const OrderDetail = () => {
                     className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
                   >
                     <img
-                      src={item.product?.images}
-                      alt={item.product?.name}
-                      className="w-12 h-12 object-cover rounded-lg"
+                      src={item.product?.images?.[0]?.url || "/placeholder.jpg"}
+                      alt={item.product?.images?.[0]?.alt || item.product?.name}
+                      className="w-16 h-16 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">
-                        {item.product?.name}
-                      </h4>
-                      <p className="text-gray-600 text-sm">
+                      <Link
+                        to={`/product/${item.product?.slug}`}
+                        className="hover:text-blue-600 transition-colors"
+                      >
+                        <h4 className="font-semibold text-gray-800">
+                          {item.product?.name}
+                        </h4>
+                      </Link>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 mt-1">
+                        <span>Brand: {item.product?.brand}</span>
+                        {item.color && <span>• Color: {item.color}</span>}
+                        {item.size && <span>• Size: {item.size}</span>}
+                      </div>
+                      <p className="text-sm text-gray-600">
                         Quantity: {item.quantity}
                       </p>
-                      <p className="text-gray-600 text-sm">
-                        Price: ${item.price}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-800 flex items-center justify-end">
+                        <FaRupeeSign size={14} />
+                        {calculateItemTotal(item).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        <FaRupeeSign size={12} />
+                        {item.price?.toLocaleString()} each
                       </p>
                     </div>
-                    <p className="font-bold text-gray-800">
-                      ${item.quantity * item.price}
-                    </p>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Shipping Address */}
+            {order.shippingAddress && (
+              <div className="bg-white rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+                  <FaMapMarkerAlt />
+                  Shipping Address
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Recipient</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <FaUser size={12} />
+                      {order.shippingAddress.fullName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Contact</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <FaPhone size={12} />
+                      {order.shippingAddress.phone}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">Address</p>
+                    <p className="font-medium">
+                      {order.shippingAddress.address},{" "}
+                      {order.shippingAddress.city},{" "}
+                      {order.shippingAddress.state} -{" "}
+                      {order.shippingAddress.pincode}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment Information */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -219,19 +283,29 @@ const OrderDetail = () => {
                 <div>
                   <p className="text-sm text-gray-600">Payment Status</p>
                   <p className="font-medium capitalize">
-                    {order.paymentInfo?.status || "N/A"}
+                    {order.paymentInfo?.status || "Paid"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Payment ID</p>
+                  <p className="text-sm text-gray-600">Payment Method</p>
                   <p className="font-medium">
-                    {order.paymentInfo?.razorpay_payment_id || "N/A"}
+                    {order.paymentInfo?.method || "Razorpay"}
                   </p>
                 </div>
+                {order.paymentInfo?.razorpay_payment_id && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">Payment ID</p>
+                    <p className="font-medium font-mono">
+                      {order.paymentInfo.razorpay_payment_id}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-gray-600">Amount Paid</p>
-                  <p className="font-medium text-green-600">
-                    ${order.paymentInfo?.amount || order.totalAmount}
+                  <p className="font-medium text-green-600 flex items-center">
+                    <FaRupeeSign size={14} />
+                    {order.paymentInfo?.amount ||
+                      order.totalAmount?.toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -263,6 +337,17 @@ const OrderDetail = () => {
                   <FaBox />
                   Continue Shopping
                 </button>
+                {order.orderStatus === "delivered" && (
+                  <button
+                    onClick={() => {
+                      /* Handle return */
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    <FaUndo />
+                    Return Item
+                  </button>
+                )}
               </div>
             </div>
 
@@ -272,8 +357,8 @@ const OrderDetail = () => {
                 Order Timeline
               </h3>
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="flex items-start gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
                     <p className="font-medium text-sm">Order Placed</p>
                     <p className="text-xs text-gray-600">
@@ -281,10 +366,10 @@ const OrderDetail = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      order.orderStatus !== "pending"
+                    className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                      order.paymentInfo?.status === "paid"
                         ? "bg-green-500"
                         : "bg-gray-300"
                     }`}
@@ -298,12 +383,15 @@ const OrderDetail = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      ["processing", "shipped", "completed"].includes(
-                        order.orderStatus
-                      )
+                    className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                      [
+                        "processing",
+                        "shipped",
+                        "delivered",
+                        "completed",
+                      ].includes(order.orderStatus)
                         ? "bg-green-500"
                         : "bg-gray-300"
                     }`}
@@ -311,27 +399,97 @@ const OrderDetail = () => {
                   <div>
                     <p className="font-medium text-sm">Order Processed</p>
                     <p className="text-xs text-gray-600">
-                      {order.updatedAt !== order.createdAt
+                      {["shipped", "delivered", "completed"].includes(
+                        order.orderStatus
+                      )
                         ? formatDate(order.updatedAt)
                         : "In progress"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                      order.orderStatus === "shipped"
+                        ? "bg-green-500"
+                        : "bg-gray-300"
+                    }`}
+                  ></div>
+                  <div>
+                    <p className="font-medium text-sm">Shipped</p>
+                    <p className="text-xs text-gray-600">
+                      {order.orderStatus === "shipped"
+                        ? formatDate(order.updatedAt)
+                        : "Pending"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                      order.orderStatus === "delivered" ||
                       order.orderStatus === "completed"
                         ? "bg-green-500"
                         : "bg-gray-300"
                     }`}
                   ></div>
                   <div>
-                    <p className="font-medium text-sm">Order Completed</p>
+                    <p className="font-medium text-sm">Delivered</p>
                     <p className="text-xs text-gray-600">
-                      {order.orderStatus === "completed"
+                      {order.orderStatus === "delivered" ||
+                      order.orderStatus === "completed"
                         ? formatDate(order.updatedAt)
                         : "Pending"}
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Order Summary
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="flex items-center">
+                    <FaRupeeSign size={10} />
+                    {(
+                      order.totalAmount -
+                      (order.taxAmount || 0) -
+                      (order.shippingFee || 0)
+                    ).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping:</span>
+                  <span className="flex items-center">
+                    {order.shippingFee === 0 ? (
+                      <span className="text-green-600">FREE</span>
+                    ) : (
+                      <>
+                        <FaRupeeSign size={10} />
+                        {order.shippingFee?.toLocaleString()}
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax:</span>
+                  <span className="flex items-center">
+                    <FaRupeeSign size={10} />
+                    {order.taxAmount?.toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span className="flex items-center">
+                      <FaRupeeSign size={12} />
+                      {order.totalAmount?.toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>

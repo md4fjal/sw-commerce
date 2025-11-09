@@ -15,30 +15,51 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    totalAmount = product.price * (quantity || 1);
+    if (product.stock < (quantity || 1)) {
+      return res.status(400).json({
+        message: "Insufficient stock available",
+      });
+    }
+
+    const productPrice = product.salePrice || product.price;
+    totalAmount = productPrice * (quantity || 1);
     orderItems.push({
       product: product._id,
       name: product.name,
-      price: product.price,
+      price: productPrice,
       quantity: quantity || 1,
     });
   } else {
     const user = await User.findById(req.user._id).populate(
       "cart.product",
-      "price name"
+      "price salePrice name stock"
     );
-    if (!user || !user.cart.length)
-      return res.status(400).json({ message: "Cart is empty" });
 
-    orderItems = user.cart.map((item) => ({
-      product: item.product._id,
-      name: item.product.name,
-      price: item.product.price,
-      quantity: item.quantity,
-    }));
+    if (!user || !user.cart.length) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    for (const item of user.cart) {
+      if (item.product.stock < item.quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for ${item.product.name}`,
+        });
+      }
+    }
+
+    orderItems = user.cart.map((item) => {
+      const productPrice = item.product.salePrice || item.product.price;
+      return {
+        product: item.product._id,
+        name: item.product.name,
+        price: productPrice,
+        quantity: item.quantity,
+      };
+    });
 
     totalAmount = user.cart.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
+      (sum, item) =>
+        sum + (item.product.salePrice || item.product.price) * item.quantity,
       0
     );
   }
@@ -89,8 +110,9 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     "paymentInfo.razorpay_order_id": razorpay_order_id,
   });
 
-  if (!order)
+  if (!order) {
     return res.status(404).json({ success: false, message: "Order not found" });
+  }
 
   if (!isAuthentic) {
     order.paymentInfo.status = "failed";
@@ -111,6 +133,12 @@ export const verifyPayment = asyncHandler(async (req, res) => {
 
   await order.save();
 
+  for (const item of order.orderItems) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: -item.quantity },
+    });
+  }
+
   await User.findByIdAndUpdate(order.user, { $set: { cart: [] } });
 
   res.status(200).json({ success: true, message: "Payment verified", order });
@@ -121,8 +149,9 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(orderId);
 
   if (!order) return res.status(404).json({ message: "Order not found" });
-  if (order.orderStatus !== "processing")
+  if (order.orderStatus !== "processing") {
     return res.status(400).json({ message: "Cannot cancel now" });
+  }
 
   order.orderStatus = "cancelled";
   await order.save();
@@ -135,8 +164,9 @@ export const refundPayment = asyncHandler(async (req, res) => {
 
   const order = await Order.findById(orderId);
   if (!order) return res.status(404).json({ message: "Order not found" });
-  if (order.paymentInfo.status !== "paid")
+  if (order.paymentInfo.status !== "paid") {
     return res.status(400).json({ message: "Order not paid yet" });
+  }
 
   const refund = await razorpayInstance.payments.refund(
     order.paymentInfo.razorpay_payment_id,
@@ -149,6 +179,12 @@ export const refundPayment = asyncHandler(async (req, res) => {
   order.orderStatus = "cancelled";
   await order.save();
 
+  for (const item of order.orderItems) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: item.quantity },
+    });
+  }
+
   res.status(200).json({
     success: true,
     message: "Refund initiated",
@@ -157,8 +193,9 @@ export const refundPayment = asyncHandler(async (req, res) => {
 });
 
 export const getMyOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id }).populate(
-    "orderItems.product"
-  );
+  const orders = await Order.find({ user: req.user._id })
+    .populate("orderItems.product", "name price images slug")
+    .sort({ createdAt: -1 });
+
   res.status(200).json({ success: true, orders });
 });

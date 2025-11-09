@@ -75,7 +75,7 @@ const Header = () => {
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <button
@@ -120,7 +120,7 @@ const Header = () => {
           <div className="flex items-center space-x-3">
             {/* Wishlist */}
             <button
-              onClick={() => navigate(isLoggedIn ? "/wishlist" : "/login")}
+              onClick={() => navigate("/wishlist")}
               className="relative p-2 text-gray-600 hover:text-red-500 transition-all duration-200 hover:scale-105"
             >
               <FaHeart className="text-xl" />
@@ -133,7 +133,7 @@ const Header = () => {
 
             {/* Cart */}
             <button
-              onClick={() => navigate(isLoggedIn ? "/cart" : "/login")}
+              onClick={() => navigate("/cart")}
               className="relative p-2 text-gray-600 hover:text-green-600 transition-all duration-200 hover:scale-105"
             >
               <FaShoppingCart className="text-xl" />

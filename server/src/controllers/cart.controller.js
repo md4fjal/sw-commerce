@@ -7,7 +7,7 @@ const calculateCartTotals = (cart) => {
   let totalQuantity = 0;
 
   cart.forEach((item) => {
-    const productPrice = item.product.price || 0;
+    const productPrice = item.product.salePrice || item.product.price || 0;
     const quantity = item.quantity || 1;
     subtotal += productPrice * quantity;
     totalQuantity += quantity;
@@ -30,7 +30,7 @@ const calculateCartTotals = (cart) => {
 export const getCart = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).populate(
     "cart.product",
-    "name price images"
+    "name price salePrice images stock slug"
   );
 
   if (!user) return res.status(404).json({ message: "User not found" });
@@ -45,10 +45,16 @@ export const getCart = asyncHandler(async (req, res) => {
 });
 
 export const addToCart = asyncHandler(async (req, res) => {
-  const { productId, quantity } = req.body;
+  const { productId, quantity = 1 } = req.body;
 
   const product = await Product.findById(productId);
   if (!product) return res.status(404).json({ message: "Product not found" });
+
+  if (product.stock < quantity) {
+    return res.status(400).json({
+      message: `Only ${product.stock} items available in stock`,
+    });
+  }
 
   const user = await User.findById(req.user._id);
 
@@ -57,13 +63,21 @@ export const addToCart = asyncHandler(async (req, res) => {
   );
 
   if (itemIndex > -1) {
-    user.cart[itemIndex].quantity += quantity || 1;
+    const newQuantity = user.cart[itemIndex].quantity + quantity;
+
+    if (product.stock < newQuantity) {
+      return res.status(400).json({
+        message: `Cannot add more than ${product.stock} items`,
+      });
+    }
+
+    user.cart[itemIndex].quantity = newQuantity;
   } else {
-    user.cart.push({ product: productId, quantity: quantity || 1 });
+    user.cart.push({ product: productId, quantity });
   }
 
   await user.save();
-  await user.populate("cart.product", "name price images");
+  await user.populate("cart.product", "name price salePrice images stock");
 
   const totals = calculateCartTotals(user.cart);
 
@@ -79,21 +93,30 @@ export const updateCartItem = asyncHandler(async (req, res) => {
   const { productId, quantity } = req.body;
 
   const user = await User.findById(req.user._id);
+  await user.populate("cart.product", "name price salePrice images stock");
 
   const itemIndex = user.cart.findIndex(
-    (item) => item.product.toString() === productId
+    (item) => item.product._id.toString() === productId
   );
-  if (itemIndex === -1)
+
+  if (itemIndex === -1) {
     return res.status(404).json({ message: "Product not in cart" });
+  }
 
   if (quantity <= 0) {
     user.cart.splice(itemIndex, 1);
   } else {
+    // Check stock before updating quantity
+    const product = user.cart[itemIndex].product;
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        message: `Only ${product.stock} items available in stock`,
+      });
+    }
     user.cart[itemIndex].quantity = quantity;
   }
 
   await user.save();
-  await user.populate("cart.product", "name price images");
 
   const totals = calculateCartTotals(user.cart);
 
@@ -112,7 +135,7 @@ export const removeFromCart = asyncHandler(async (req, res) => {
 
   user.cart = user.cart.filter((item) => item.product.toString() !== productId);
   await user.save();
-  await user.populate("cart.product", "name price images");
+  await user.populate("cart.product", "name price salePrice images stock");
 
   const totals = calculateCartTotals(user.cart);
 

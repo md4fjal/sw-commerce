@@ -173,6 +173,8 @@ const Categories = () => {
     );
   };
 
+  console.log("asdf", categories);
+
   if (loading) return <Loader />;
 
   return (
@@ -242,6 +244,34 @@ const Categories = () => {
                   </th>
 
                   <th
+                    onClick={() => handleSort("parent")}
+                    className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span>Parent</span>
+                      {getSortIcon("parent")}
+                    </div>
+                  </th>
+
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <span>Image</span>
+                    </div>
+                  </th>
+
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <span>Banner</span>
+                    </div>
+                  </th>
+
+                  <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <span>Icon</span>
+                    </div>
+                  </th>
+
+                  <th
                     onClick={() => handleSort("createdAt")}
                     className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-center cursor-pointer hover:bg-gray-100"
                   >
@@ -264,19 +294,42 @@ const Categories = () => {
                       key={category._id}
                       className="hover:bg-purple-50 transition-colors duration-200"
                     >
-                      <td className="p-4 flex items-center space-x-3">
+                      <td className="px-6 py-4 text-gray-600">
+                        {category.name}
+                      </td>
+
+                      <td className="px-6 py-4 text-gray-600">
+                        {category.parent?.name || "No Parent"}
+                      </td>
+
+                      <td className="p-4">
                         {category.image && (
                           <img
-                            src={category.image}
-                            alt={category.name}
+                            src={category.image.url}
+                            alt={category.image.public_id}
                             className="w-10 h-10 rounded-lg object-cover border border-gray-200"
                           />
                         )}
-                        <span className="text-gray-800 font-medium">
-                          {category.name}
-                        </span>
+                      </td>
+                      <td className="p-4">
+                        {category.banner && (
+                          <img
+                            src={category.banner.url}
+                            alt={category.banner.public_id}
+                            className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                          />
+                        )}
                       </td>
 
+                      <td className="p-4">
+                        {category.icon && (
+                          <img
+                            src={category.icon.url}
+                            alt={category.icon.public_id}
+                            className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                          />
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-center text-gray-600">
                         {new Date(category.createdAt).toLocaleDateString(
                           "en-US",

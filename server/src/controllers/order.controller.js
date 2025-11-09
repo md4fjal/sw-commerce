@@ -20,11 +20,11 @@ export const getAllOrders = asyncHandler(async (req, res) => {
       }
     : {};
 
-  const total = await Order.countDocuments();
+  const total = await Order.countDocuments(query);
 
-  const orders = await Order.find()
+  const orders = await Order.find(query)
     .populate("user", "name email")
-    .populate("orderItems.product", "name price")
+    .populate("orderItems.product", "name price images")
     .sort({ [sortBy]: order })
     .skip(skip)
     .limit(limit);
@@ -43,7 +43,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
   const order = await Order.findById(orderId)
     .populate("user", "name email")
-    .populate("orderItems.product", "name price");
+    .populate("orderItems.product", "name price images slug");
 
   if (!order) return res.status(404).json({ message: "Order not found" });
 
@@ -52,23 +52,26 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
-  const { status } = req.body; // e.g., 'processing', 'shipped', 'delivered', 'cancelled'
+  const { status } = req.body;
 
   const order = await Order.findById(orderId);
   if (!order) return res.status(404).json({ message: "Order not found" });
 
   const validStatuses = ["processing", "shipped", "delivered", "cancelled"];
-  if (!validStatuses.includes(status))
-    return res
-      .status(400)
-      .json({ message: `Invalid status. Must be one of ${validStatuses}` });
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      message: `Invalid status. Must be one of ${validStatuses.join(", ")}`,
+    });
+  }
 
   order.orderStatus = status;
   await order.save();
 
-  res
-    .status(200)
-    .json({ success: true, message: "Order status updated", order });
+  res.status(200).json({
+    success: true,
+    message: "Order status updated",
+    order,
+  });
 });
 
 export const deleteOrder = asyncHandler(async (req, res) => {
@@ -83,7 +86,6 @@ export const deleteOrder = asyncHandler(async (req, res) => {
 });
 
 export const getOrderStats = asyncHandler(async (req, res) => {
-  // Get current and previous month for comparison
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -94,20 +96,16 @@ export const getOrderStats = asyncHandler(async (req, res) => {
   const stats = await Order.aggregate([
     {
       $facet: {
-        // Total orders count
         totalOrders: [{ $count: "count" }],
 
-        // Total revenue
         totalRevenue: [
-          { $group: { _id: null, total: { $sum: "$totalPrice" } } },
+          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
         ],
 
-        // Orders by status
         ordersByStatus: [
           { $group: { _id: "$orderStatus", count: { $sum: 1 } } },
         ],
 
-        // Monthly breakdown
         monthlyOrders: [
           {
             $group: {
@@ -116,13 +114,12 @@ export const getOrderStats = asyncHandler(async (req, res) => {
                 month: { $month: "$createdAt" },
               },
               count: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
+              revenue: { $sum: "$totalAmount" },
             },
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } },
         ],
 
-        // Current month stats
         currentMonthStats: [
           {
             $match: {
@@ -138,12 +135,11 @@ export const getOrderStats = asyncHandler(async (req, res) => {
             $group: {
               _id: null,
               orders: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
+              revenue: { $sum: "$totalAmount" },
             },
           },
         ],
 
-        // Previous month stats
         previousMonthStats: [
           {
             $match: {
@@ -159,16 +155,15 @@ export const getOrderStats = asyncHandler(async (req, res) => {
             $group: {
               _id: null,
               orders: { $sum: 1 },
-              revenue: { $sum: "$totalPrice" },
+              revenue: { $sum: "$totalAmount" },
             },
           },
         ],
 
-        // Completed orders for conversion rate calculation
         completedOrders: [
           {
             $match: {
-              orderStatus: "completed", // or whatever status represents completed orders
+              orderStatus: "delivered",
             },
           },
           {
@@ -176,13 +171,11 @@ export const getOrderStats = asyncHandler(async (req, res) => {
           },
         ],
 
-        // Total visitors/sessions (you'll need to integrate with your analytics)
-        // This is a placeholder - you'll need to replace with actual visitor data
         totalSessions: [
           {
             $group: {
               _id: null,
-              count: { $sum: 1 }, // This is just a placeholder
+              count: { $sum: 1 },
             },
           },
         ],
@@ -192,7 +185,6 @@ export const getOrderStats = asyncHandler(async (req, res) => {
 
   const data = stats[0];
 
-  // Calculate growth percentages
   const currentMonthData = data.currentMonthStats[0] || {
     orders: 0,
     revenue: 0,
@@ -202,7 +194,6 @@ export const getOrderStats = asyncHandler(async (req, res) => {
     revenue: 0,
   };
 
-  // Order growth calculation
   const orderGrowth =
     previousMonthData.orders > 0
       ? ((currentMonthData.orders - previousMonthData.orders) /
@@ -212,7 +203,6 @@ export const getOrderStats = asyncHandler(async (req, res) => {
       ? 100
       : 0;
 
-  // Revenue growth calculation
   const revenueGrowth =
     previousMonthData.revenue > 0
       ? ((currentMonthData.revenue - previousMonthData.revenue) /
@@ -222,23 +212,21 @@ export const getOrderStats = asyncHandler(async (req, res) => {
       ? 100
       : 0;
 
-  // Conversion rate calculation
   const totalOrdersCount = data.totalOrders[0]?.count || 0;
   const completedOrdersCount = data.completedOrders[0]?.count || 0;
   const totalSessionsCount =
-    data.totalSessions[0]?.count || totalOrdersCount * 10; // Placeholder logic
+    data.totalSessions[0]?.count || totalOrdersCount * 10;
 
   const conversionRate =
     totalSessionsCount > 0
       ? (completedOrdersCount / totalSessionsCount) * 100
       : 0;
 
-  // Calculate conversion rate change (placeholder - you might want to compare with previous period)
-  const conversionChange = 2.5; // Placeholder - implement actual comparison logic
+  const conversionChange = 2.5;
 
   res.status(200).json({
     success: true,
-    totalOrders: data.totalOrders[0]?.count || 0,
+    totalOrders: totalOrdersCount,
     totalRevenue: data.totalRevenue[0]?.total || 0,
     ordersByStatus: data.ordersByStatus,
     monthlyOrders: data.monthlyOrders,

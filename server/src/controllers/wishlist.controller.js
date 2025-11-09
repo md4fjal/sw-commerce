@@ -3,10 +3,15 @@ import { User } from "../models/user.model.js";
 import { Product } from "../models/product.model.js";
 
 export const getWishlist = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).populate(
-    "wishlist",
-    "name price images"
-  );
+  const user = await User.findById(req.user._id).populate({
+    path: "wishlist",
+    select: "name price salePrice images stock slug category brand",
+    populate: {
+      path: "category",
+      select: "name",
+    },
+  });
+
   res.status(200).json({ success: true, wishlist: user.wishlist });
 });
 

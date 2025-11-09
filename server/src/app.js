@@ -11,6 +11,7 @@ import cartRoute from "./routes/cart.route.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import shiprocketRoutes from "./routes/shiprocket.routes.js";
 import orderRoutes from "./routes/order.routes.js";
+import addressRoutes from "./routes/address.routes.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/v1/cart", cartRoute);
 app.use("/api/v1/payment", paymentRoutes);
 app.use("/api/v1/shiprocket", shiprocketRoutes);
 app.use("/api/v1/order", orderRoutes);
+app.use("/api/v1/address", addressRoutes);
 
 connectDB().then(() => {
   app.listen(PORT, () => {

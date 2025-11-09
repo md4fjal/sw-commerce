@@ -30,7 +30,7 @@ export const addToWishlist = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return { ...data, productId };
+      return data;
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Add to wishlist failed"
@@ -43,17 +43,47 @@ export const removeFromWishlist = createAsyncThunk(
   "wishlist/remove",
   async ({ token, productId }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.post(
-        `${API_URL}/remove`,
-        { productId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const { data } = await axios.delete(`${API_URL}/remove`, {
+        data: { productId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return { ...data, productId };
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Remove from wishlist failed"
+      );
+    }
+  }
+);
+
+export const toggleWishlistItem = createAsyncThunk(
+  "wishlist/toggle",
+  async ({ token, productId }, { rejectWithValue, getState }) => {
+    try {
+      const state = getState();
+      const isInWishlist = state.wishlist.wishlist.some(
+        (item) => item._id === productId
+      );
+
+      if (isInWishlist) {
+        const { data } = await axios.delete(`${API_URL}/remove`, {
+          data: { productId },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return { ...data, productId, action: "remove" };
+      } else {
+        const { data } = await axios.post(
+          `${API_URL}/add`,
+          { productId },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        return { ...data, productId, action: "add" };
+      }
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Wishlist operation failed"
       );
     }
   }
@@ -80,6 +110,19 @@ const wishlistSlice = createSlice({
       state.success = false;
       state.error = null;
     },
+    addItemInstantly: (state, action) => {
+      const product = action.payload;
+      const existingItem = state.wishlist.find(
+        (item) => item._id === product._id
+      );
+      if (!existingItem) {
+        state.wishlist.push(product);
+      }
+    },
+    removeItemInstantly: (state, action) => {
+      const productId = action.payload;
+      state.wishlist = state.wishlist.filter((item) => item._id !== productId);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -90,6 +133,7 @@ const wishlistSlice = createSlice({
       .addCase(fetchWishlist.fulfilled, (state, action) => {
         state.loading = false;
         state.wishlist = action.payload.wishlist || [];
+        state.error = null;
       })
       .addCase(fetchWishlist.rejected, (state, action) => {
         state.loading = false;
@@ -98,24 +142,22 @@ const wishlistSlice = createSlice({
 
       .addCase(addToWishlist.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(addToWishlist.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
-        const existingProduct = state.wishlist.find(
-          (item) => item._id === action.payload.productId
-        );
-        if (!existingProduct) {
-          state.wishlist.push({ _id: action.payload.productId });
-        }
+        state.error = null;
       })
       .addCase(addToWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
       })
 
       .addCase(removeFromWishlist.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(removeFromWishlist.fulfilled, (state, action) => {
         state.loading = false;
@@ -123,13 +165,42 @@ const wishlistSlice = createSlice({
         state.wishlist = state.wishlist.filter(
           (item) => item._id !== action.payload.productId
         );
+        state.error = null;
       })
       .addCase(removeFromWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.success = false;
+      })
+
+      .addCase(toggleWishlistItem.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(toggleWishlistItem.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
+
+        if (action.payload.action === "remove") {
+          state.wishlist = state.wishlist.filter(
+            (item) => item._id !== action.payload.productId
+          );
+        }
+        state.error = null;
+      })
+      .addCase(toggleWishlistItem.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.success = false;
       });
   },
 });
 
-export const { resetStatus, clearWishlist } = wishlistSlice.actions;
+export const {
+  resetStatus,
+  clearWishlist,
+  addItemInstantly,
+  removeItemInstantly,
+} = wishlistSlice.actions;
+
 export default wishlistSlice.reducer;

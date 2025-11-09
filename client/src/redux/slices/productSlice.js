@@ -6,13 +6,39 @@ const API_URL = "http://localhost:5000/api/v1/product";
 export const fetchProducts = createAsyncThunk(
   "products/fetchAll",
   async (
-    { search = "", sortBy = "createdAt", order = "desc", page = 1, limit = 10 },
+    {
+      search = "",
+      sortBy = "createdAt",
+      order = "desc",
+      page = 1,
+      limit = 10,
+      category = "",
+      brand = "",
+      gender = "",
+      minPrice = "",
+      maxPrice = "",
+      inStock = "",
+      isFeatured = "",
+      isNewArrival = "",
+      isTrending = "",
+    },
     { rejectWithValue }
   ) => {
     try {
-      const { data } = await axios.get(
-        `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`
-      );
+      let url = `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
+
+      // Add optional filters
+      if (category) url += `&category=${category}`;
+      if (brand) url += `&brand=${brand}`;
+      if (gender && gender !== "all") url += `&gender=${gender}`;
+      if (minPrice) url += `&minPrice=${minPrice}`;
+      if (maxPrice) url += `&maxPrice=${maxPrice}`;
+      if (inStock) url += `&inStock=${inStock}`;
+      if (isFeatured) url += `&isFeatured=${isFeatured}`;
+      if (isNewArrival) url += `&isNewArrival=${isNewArrival}`;
+      if (isTrending) url += `&isTrending=${isTrending}`;
+
+      const { data } = await axios.get(url);
       return data;
     } catch (error) {
       return rejectWithValue(
@@ -36,12 +62,29 @@ export const getProductById = createAsyncThunk(
   }
 );
 
+export const getProductBySlug = createAsyncThunk(
+  "products/fetchBySlug",
+  async ({ slug }, { rejectWithValue }) => {
+    try {
+      const { data } = await axios.get(`${API_URL}/slug/${slug}`);
+      return data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Product not found"
+      );
+    }
+  }
+);
+
 export const addProduct = createAsyncThunk(
   "products/add",
-  async ({ token, data }, { rejectWithValue }) => {
+  async ({ token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.post(API_URL, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
       return res.data;
     } catch (err) {
@@ -54,10 +97,13 @@ export const addProduct = createAsyncThunk(
 
 export const updateProduct = createAsyncThunk(
   "products/updateProduct",
-  async ({ id, token, data }, { rejectWithValue }) => {
+  async ({ id, token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/${id}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await axios.put(`${API_URL}/${id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
       return res.data;
     } catch (err) {
@@ -95,6 +141,7 @@ const initialState = {
   order: "desc",
   limit: 10,
   loading: false,
+  productLoading: false,
   success: false,
   error: null,
 };
@@ -112,6 +159,13 @@ const productSlice = createSlice({
     },
     setPage: (state, action) => {
       state.page = action.payload;
+    },
+    resetStatus: (state) => {
+      state.success = false;
+      state.error = null;
+    },
+    clearProduct: (state) => {
+      state.product = null;
     },
   },
   extraReducers: (builder) => {
@@ -135,16 +189,19 @@ const productSlice = createSlice({
       })
 
       .addCase(getProductById.pending, (state) => {
-        state.loading = true;
+        state.productLoading = true;
       })
       .addCase(getProductById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.success = true;
+        state.productLoading = false;
         state.product = action.payload.product;
       })
       .addCase(getProductById.rejected, (state, action) => {
-        state.loading = false;
+        state.productLoading = false;
         state.error = action.payload;
+      })
+
+      .addCase(getProductBySlug.fulfilled, (state, action) => {
+        state.product = action.payload.product;
       })
 
       .addCase(addProduct.pending, (state) => {
@@ -170,6 +227,9 @@ const productSlice = createSlice({
         state.products = state.products.map((p) =>
           p._id === updated._id ? updated : p
         );
+        if (state.product && state.product._id === updated._id) {
+          state.product = updated;
+        }
       })
       .addCase(updateProduct.rejected, (state, action) => {
         state.loading = false;
@@ -185,6 +245,9 @@ const productSlice = createSlice({
         state.products = state.products.filter(
           (p) => p._id !== action.payload.id
         );
+        if (state.product && state.product._id === action.payload.id) {
+          state.product = null;
+        }
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
@@ -193,5 +256,6 @@ const productSlice = createSlice({
   },
 });
 
-export const { setSearch, setPage, setSort } = productSlice.actions;
+export const { setSearch, setPage, setSort, resetStatus, clearProduct } =
+  productSlice.actions;
 export default productSlice.reducer;

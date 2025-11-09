@@ -5,13 +5,13 @@ const API_URL = "http://localhost:5000/api/v1/payment";
 
 const initialState = {
   orders: [],
+  totalOrders: 0,
   order: null,
   loading: false,
   success: false,
   error: null,
 };
 
-// ---------- CREATE RAZORPAY ORDER ----------
 export const createRazorpayOrder = createAsyncThunk(
   "payment/createOrder",
   async ({ token }, { rejectWithValue }) => {
@@ -30,7 +30,6 @@ export const createRazorpayOrder = createAsyncThunk(
   }
 );
 
-// ---------- VERIFY PAYMENT ----------
 export const verifyPayment = createAsyncThunk(
   "payment/verifyPayment",
   async (
@@ -63,7 +62,6 @@ export const verifyPayment = createAsyncThunk(
   }
 );
 
-// ---------- CANCEL ORDER ----------
 export const cancelOrder = createAsyncThunk(
   "payment/cancelOrder",
   async ({ token, orderId }, { rejectWithValue }) => {
@@ -82,7 +80,6 @@ export const cancelOrder = createAsyncThunk(
   }
 );
 
-// ---------- REFUND PAYMENT ----------
 export const refundPayment = createAsyncThunk(
   "payment/refundPayment",
   async ({ token, orderId }, { rejectWithValue }) => {
@@ -101,7 +98,6 @@ export const refundPayment = createAsyncThunk(
   }
 );
 
-// ---------- GET MY ORDERS ----------
 export const getMyOrders = createAsyncThunk(
   "payment/getMyOrders",
   async ({ token }, { rejectWithValue }) => {
@@ -135,7 +131,6 @@ const paymentSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // ----- create order -----
       .addCase(createRazorpayOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -150,7 +145,6 @@ const paymentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // ----- verify payment -----
       .addCase(verifyPayment.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -165,7 +159,6 @@ const paymentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // ----- cancel order -----
       .addCase(cancelOrder.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -182,7 +175,6 @@ const paymentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // ----- refund payment -----
       .addCase(refundPayment.pending, (state) => {
         state.loading = true;
       })
@@ -196,7 +188,6 @@ const paymentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // ----- get my orders -----
       .addCase(getMyOrders.pending, (state) => {
         state.loading = true;
       })
@@ -204,6 +195,7 @@ const paymentSlice = createSlice({
         state.loading = false;
         state.success = true;
         state.orders = action.payload;
+        state.totalOrders = action.payload.length;
       })
       .addCase(getMyOrders.rejected, (state, action) => {
         state.loading = false;

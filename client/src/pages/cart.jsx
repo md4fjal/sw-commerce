@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   fetchCart,
   updateCartItem,
@@ -13,9 +13,11 @@ import {
   FaTrash,
   FaPlus,
   FaMinus,
-  FaShoppingBag,
   FaArrowLeft,
   FaCreditCard,
+  FaTag,
+  FaStar,
+  FaShieldAlt,
 } from "react-icons/fa";
 import Loader from "../components/loader";
 
@@ -32,53 +34,93 @@ const Cart = () => {
     totalAmount,
     totalQuantity,
     loading,
+    error,
   } = useSelector((state) => state.cart);
+  console.log("cart", cart);
 
   useEffect(() => {
-    dispatch(fetchCart({ token }));
+    if (token) {
+      dispatch(fetchCart({ token }));
+    }
   }, [dispatch, token]);
 
-  const handleQuantityChange = (productId, newQuantity) => {
-    if (newQuantity <= 0) {
-      dispatch(removeFromCart({ token, productId }));
-    } else {
-      dispatch(updateCartItem({ token, productId, quantity: newQuantity }));
-    }
-  };
+  const handleIncrement = async (item) => {
+    const productId = item.product?._id;
+    const currentQty = item.quantity;
+    const stock = item.product?.stock || 0;
 
-  const handleIncrement = (productId, currentQty) => {
-    dispatch(incrementQuantity({ productId }));
-    dispatch(
-      updateCartItem({
-        token,
-        productId,
-        quantity: currentQty + 1,
-      })
-    );
-  };
+    if (!productId) return;
 
-  const handleDecrement = (productId, currentQty) => {
-    if (currentQty === 1) {
-      dispatch(removeFromCart({ token, productId }));
+    if (currentQty >= stock) {
+      alert(`Only ${stock} items available in stock`);
       return;
     }
 
-    dispatch(decrementQuantity({ productId }));
-    dispatch(
-      updateCartItem({
-        token,
-        productId,
-        quantity: currentQty - 1,
-      })
-    );
+    try {
+      dispatch(incrementQuantity({ productId }));
+
+      await dispatch(
+        updateCartItem({
+          token,
+          productId,
+          quantity: currentQty + 1,
+        })
+      ).unwrap();
+    } catch (error) {
+      alert(error || "Failed to update quantity");
+      dispatch(fetchCart({ token }));
+    }
   };
 
-  const handleRemoveItem = (productId) => {
-    dispatch(removeFromCart({ token, productId }));
+  const handleDecrement = async (item) => {
+    const productId = item.product?._id;
+    const currentQty = item.quantity;
+
+    if (!productId) return;
+
+    if (currentQty === 1) {
+      handleRemoveItem(productId);
+      return;
+    }
+
+    try {
+      dispatch(decrementQuantity({ productId }));
+
+      await dispatch(
+        updateCartItem({
+          token,
+          productId,
+          quantity: currentQty - 1,
+        })
+      ).unwrap();
+    } catch (error) {
+      alert(error || "Failed to update quantity");
+      dispatch(fetchCart({ token }));
+    }
   };
 
-  const handleClearCart = () => {
-    dispatch(clearCart({ token }));
+  const handleRemoveItem = async (productId) => {
+    if (!productId) return;
+
+    if (
+      window.confirm("Are you sure you want to remove this item from cart?")
+    ) {
+      try {
+        await dispatch(removeFromCart({ token, productId })).unwrap();
+      } catch (error) {
+        alert(error || "Failed to remove item from cart");
+      }
+    }
+  };
+
+  const handleClearCart = async () => {
+    if (window.confirm("Are you sure you want to clear your entire cart?")) {
+      try {
+        await dispatch(clearCart({ token })).unwrap();
+      } catch (error) {
+        alert(error || "Failed to clear cart");
+      }
+    }
   };
 
   const handleCheckout = () => {
@@ -86,20 +128,70 @@ const Cart = () => {
       alert("Your cart is empty!");
       return;
     }
+
+    // Check if any items are out of stock or have insufficient stock
+    const problematicItems = cart.filter((item) => {
+      const product = item.product;
+      return !product || product.stock === 0 || item.quantity > product.stock;
+    });
+
+    if (problematicItems.length > 0) {
+      alert(
+        "Some items in your cart have stock issues. Please update quantities or remove them before checkout."
+      );
+      return;
+    }
+
     navigate("/checkout");
   };
 
-  if (loading) {
+  const getDisplayPrice = (product) => {
+    if (!product) return null;
+
+    const price = product.price || 0;
+    const salePrice = product.salePrice;
+
+    if (salePrice && salePrice < price) {
+      return (
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-bold text-green-600">
+            ₹{salePrice.toLocaleString()}
+          </p>
+          <p className="text-sm text-gray-500 line-through">
+            ₹{price.toLocaleString()}
+          </p>
+        </div>
+      );
+    }
+    return (
+      <p className="text-lg font-bold text-blue-600">
+        ₹{price.toLocaleString()}
+      </p>
+    );
+  };
+
+  const calculateItemTotal = (item) => {
+    if (!item.product) return 0;
+
+    const price = item.product.salePrice || item.product.price || 0;
+    return price * item.quantity;
+  };
+
+  // Calculate free shipping threshold (matching backend logic)
+  const freeShippingThreshold = 1000;
+  const amountToFreeShipping = freeShippingThreshold - (subtotal || 0);
+
+  if (loading && cart.length === 0) {
     return <Loader />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/shop")}
             className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
           >
             <FaArrowLeft />
@@ -111,7 +203,39 @@ const Cart = () => {
           <div className="w-24"></div>
         </div>
 
-        {cart.length === 0 ? (
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
+        {!token ? (
+          // Not logged in state
+          <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
+            <div className="text-4xl mb-4">🔐</div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Please Login
+            </h2>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              You need to be logged in to view your cart and start shopping.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => navigate("/login")}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => navigate("/register")}
+                className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Register
+              </button>
+            </div>
+          </div>
+        ) : cart.length === 0 ? (
           // Empty Cart State
           <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
             <div className="text-4xl mb-4">🛒</div>
@@ -130,7 +254,7 @@ const Cart = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -140,68 +264,144 @@ const Cart = () => {
                   </h2>
                   <button
                     onClick={handleClearCart}
-                    className="text-red-500 hover:text-red-600 font-medium text-sm flex items-center gap-2"
+                    disabled={loading}
+                    className="text-red-500 hover:text-red-600 font-medium text-sm flex items-center gap-2 disabled:opacity-50"
                   >
                     <FaTrash size={14} />
-                    Clear Cart
+                    {loading ? "Clearing..." : "Clear Cart"}
                   </button>
                 </div>
 
                 <div className="space-y-4">
-                  {cart.map((item) => (
-                    <div
-                      key={item.product?._id}
-                      className="flex items-center gap-4 p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <img
-                        src={item.product?.images}
-                        alt={item.product?.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
+                  {cart.map((item) => {
+                    const product = item.product;
+                    if (!product) return null;
 
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-800">
-                          {item.product?.name}
-                        </h3>
-                        <p className="text-blue-600 font-bold">
-                          ${item.product?.price}
-                        </p>
-                      </div>
+                    const isOutOfStock = product.stock === 0;
+                    const isLowStock =
+                      product.stock > 0 && item.quantity > product.stock;
+                    const canIncrement = item.quantity < product.stock;
 
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() =>
-                            handleDecrement(item.product._id, item.quantity)
-                          }
-                          className="w-8 h-8 rounded-md bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        >
-                          <FaMinus size={12} />
-                        </button>
-
-                        <span className="w-8 text-center font-medium">
-                          {item.quantity}
-                        </span>
-
-                        <button
-                          onClick={() =>
-                            handleIncrement(item.product._id, item.quantity)
-                          }
-                          className="w-8 h-8 rounded-md bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        >
-                          <FaPlus size={12} />
-                        </button>
-                      </div>
-
-                      {/* Remove Button */}
-                      <button
-                        onClick={() => handleRemoveItem(item.product?._id)}
-                        className="p-2 text-red-500 hover:text-red-600 transition-colors"
+                    return (
+                      <div
+                        key={item._id || `${product._id}-${Date.now()}`}
+                        className={`flex items-start gap-4 p-4 border rounded-lg transition-colors ${
+                          isOutOfStock
+                            ? "border-red-200 bg-red-50"
+                            : isLowStock
+                            ? "border-orange-200 bg-orange-50"
+                            : "border-gray-100 hover:bg-gray-50"
+                        }`}
                       >
-                        <FaTrash size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        <Link
+                          to={`/product/${product.slug}`}
+                          className="flex-shrink-0"
+                        >
+                          <img
+                            src={product.images?.[0]?.url || "/placeholder.jpg"}
+                            alt={product.images?.[0]?.alt || product.name}
+                            className="w-20 h-20 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src = "/placeholder.jpg";
+                            }}
+                          />
+                        </Link>
+
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            to={`/product/${product.slug}`}
+                            className="hover:text-blue-600 transition-colors"
+                          >
+                            <h3 className="font-semibold text-gray-800 mb-1 truncate">
+                              {product.name}
+                            </h3>
+                          </Link>
+
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-sm text-gray-600">
+                              Brand:{" "}
+                              <span className="font-medium">
+                                {product.brand}
+                              </span>
+                            </p>
+                            {product.colors?.[0] && (
+                              <span className="text-sm text-gray-600">
+                                • Color:{" "}
+                                <span className="font-medium">
+                                  {product.colors[0]}
+                                </span>
+                              </span>
+                            )}
+                            {product.sizes?.[0] && (
+                              <span className="text-sm text-gray-600">
+                                • Size:{" "}
+                                <span className="font-medium">
+                                  {product.sizes[0]}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+
+                          {getDisplayPrice(product)}
+
+                          {/* Stock Warning */}
+                          {isOutOfStock && (
+                            <p className="text-red-600 text-sm font-medium mt-1">
+                              Out of Stock
+                            </p>
+                          )}
+                          {isLowStock && (
+                            <p className="text-orange-600 text-sm font-medium mt-1">
+                              Only {product.stock} left in stock
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleDecrement(item)}
+                            disabled={isOutOfStock || loading}
+                            className="w-8 h-8 rounded-md bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <FaMinus size={12} />
+                          </button>
+
+                          <span
+                            className={`w-8 text-center font-medium ${
+                              isOutOfStock ? "text-red-600" : "text-gray-800"
+                            }`}
+                          >
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            onClick={() => handleIncrement(item)}
+                            disabled={isOutOfStock || !canIncrement || loading}
+                            className="w-8 h-8 rounded-md bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <FaPlus size={12} />
+                          </button>
+                        </div>
+
+                        {/* Item Total */}
+                        <div className="text-right min-w-20">
+                          <p className="font-bold text-gray-800">
+                            ₹{calculateItemTotal(item).toLocaleString()}
+                          </p>
+                        </div>
+
+                        {/* Remove Button */}
+                        <button
+                          onClick={() => handleRemoveItem(product._id)}
+                          disabled={loading}
+                          className="p-2 text-red-500 hover:text-red-600 transition-colors flex-shrink-0 disabled:opacity-50"
+                        >
+                          <FaTrash size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -216,11 +416,11 @@ const Cart = () => {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal ({totalQuantity} items)</span>
-                    <span>${subtotal}</span>
+                    <span>₹{(subtotal || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Tax (18%)</span>
-                    <span>${taxAmount}</span>
+                    <span>₹{(taxAmount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping Fee</span>
@@ -228,14 +428,14 @@ const Cart = () => {
                       {shippingFee === 0 ? (
                         <span className="text-green-500">FREE</span>
                       ) : (
-                        `$${shippingFee}`
+                        `₹${(shippingFee || 0).toLocaleString()}`
                       )}
                     </span>
                   </div>
                   <div className="border-t pt-3 mt-3">
                     <div className="flex justify-between text-lg font-bold text-gray-800">
                       <span>Total Amount</span>
-                      <span>${totalAmount}</span>
+                      <span>₹{(totalAmount || 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -243,26 +443,58 @@ const Cart = () => {
                 {/* Checkout Button */}
                 <button
                   onClick={handleCheckout}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  disabled={
+                    loading ||
+                    cart.length === 0 ||
+                    cart.some((item) => {
+                      const product = item.product;
+                      return (
+                        !product ||
+                        product.stock === 0 ||
+                        item.quantity > product.stock
+                      );
+                    })
+                  }
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FaCreditCard />
-                  Proceed to Checkout
+                  {loading ? "Processing..." : "Proceed to Checkout"}
                 </button>
 
                 {/* Continue Shopping */}
                 <button
                   onClick={() => navigate("/shop")}
-                  className="w-full mt-3 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  disabled={loading}
+                  className="w-full mt-3 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Continue Shopping
                 </button>
 
                 {/* Free Shipping Notice */}
-                {subtotal < 1000 && (
+                {subtotal < freeShippingThreshold && subtotal > 0 && (
                   <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-amber-700 text-sm text-center">
-                    Add ${1000 - subtotal} more for FREE shipping!
+                    Add ₹{Math.max(0, amountToFreeShipping).toLocaleString()}{" "}
+                    more for FREE shipping!
                   </div>
                 )}
+
+                {/* Security Badges */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex justify-center gap-4 text-gray-500">
+                    <div className="text-center">
+                      <FaShieldAlt className="mx-auto mb-1" />
+                      <span className="text-xs">Secure Payment</span>
+                    </div>
+                    <div className="text-center">
+                      <FaTag className="mx-auto mb-1" />
+                      <span className="text-xs">Best Price</span>
+                    </div>
+                    <div className="text-center">
+                      <FaStar className="mx-auto mb-1" />
+                      <span className="text-xs">Quality Assured</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

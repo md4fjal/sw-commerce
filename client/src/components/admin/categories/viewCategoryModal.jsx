@@ -1,5 +1,10 @@
-// ViewCategoryModal.jsx
-import { FaTimes, FaCalendar, FaImage, FaTag } from "react-icons/fa";
+import {
+  FaTimes,
+  FaCalendar,
+  FaImage,
+  FaTag,
+  FaLayerGroup,
+} from "react-icons/fa";
 
 const ViewCategoryModal = ({ category, onClose }) => {
   if (!category) return null;
@@ -30,13 +35,38 @@ const ViewCategoryModal = ({ category, onClose }) => {
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Category Image */}
-          <div className="flex justify-center">
-            <img
-              src={category.image}
-              alt={category.name}
-              className="w-24 h-24 object-cover rounded-lg border border-gray-300"
-            />
+          {/* Images */}
+          <div className="grid grid-cols-3 gap-4">
+            {category.image?.url && (
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-2">Image</p>
+                <img
+                  src={category.image.url}
+                  alt={category.name}
+                  className="w-16 h-16 object-cover rounded-lg border border-gray-300 mx-auto"
+                />
+              </div>
+            )}
+            {category.banner?.url && (
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-2">Banner</p>
+                <img
+                  src={category.banner.url}
+                  alt={`${category.name} banner`}
+                  className="w-16 h-16 object-cover rounded-lg border border-gray-300 mx-auto"
+                />
+              </div>
+            )}
+            {category.icon?.url && (
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-2">Icon</p>
+                <img
+                  src={category.icon.url}
+                  alt={`${category.name} icon`}
+                  className="w-16 h-16 object-cover rounded-lg border border-gray-300 mx-auto"
+                />
+              </div>
+            )}
           </div>
 
           {/* Category Details */}
@@ -50,11 +80,31 @@ const ViewCategoryModal = ({ category, onClose }) => {
             </div>
 
             <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <FaLayerGroup className="text-blue-500 text-sm" />
+              <div>
+                <p className="text-sm text-gray-500">Parent Category</p>
+                <p className="font-semibold text-gray-900">
+                  {category.parent?.name || "No Parent"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <FaCalendar className="text-blue-500 text-sm" />
               <div>
                 <p className="text-sm text-gray-500">Created At</p>
                 <p className="font-semibold text-gray-900">
                   {new Date(category.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <FaCalendar className="text-blue-500 text-sm" />
+              <div>
+                <p className="text-sm text-gray-500">Last Updated</p>
+                <p className="font-semibold text-gray-900">
+                  {new Date(category.updatedAt).toLocaleString()}
                 </p>
               </div>
             </div>

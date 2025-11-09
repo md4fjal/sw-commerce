@@ -196,7 +196,6 @@ const Products = () => {
     );
   };
 
-  // Product rows - Keeping the original table structure but using EntityActions
   const productRows = useMemo(() => {
     if (!products || products.length === 0) {
       return (
@@ -218,14 +217,19 @@ const Products = () => {
         className="hover:bg-purple-50 transition-colors duration-200"
       >
         <td className="px-6 py-4 flex items-center space-x-3">
-          {product.images && (
+          {product.images && product.images.length > 0 && (
             <img
-              src={product.images}
-              alt={product.name}
+              src={product.images[0].url}
+              alt={product.images[0].alt || product.name}
               className="w-10 h-10 rounded-lg object-cover border border-gray-200"
             />
           )}
-          <span className="font-medium text-gray-900">{product.name}</span>
+          <div>
+            <span className="font-medium text-gray-900 block">
+              {product.name}
+            </span>
+            <span className="text-sm text-gray-500">{product.brand}</span>
+          </div>
         </td>
 
         <td className="px-6 py-4 text-gray-700">
@@ -233,11 +237,32 @@ const Products = () => {
         </td>
 
         <td className="px-6 py-4 text-right text-gray-700">
-          ₹{Number(product.price || 0).toFixed(2)}
+          {product.salePrice ? (
+            <div className="flex flex-col items-end">
+              <span className="text-red-600 font-semibold">
+                ₹{Number(product.salePrice).toFixed(2)}
+              </span>
+              <span className="text-sm text-gray-400 line-through">
+                ₹{Number(product.price).toFixed(2)}
+              </span>
+            </div>
+          ) : (
+            <span className="font-semibold">
+              ₹{Number(product.price).toFixed(2)}
+            </span>
+          )}
         </td>
 
-        <td className="px-6 py-4 text-center text-gray-700">
-          {product.stock || 0}
+        <td className="px-6 py-4 text-center">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              product.stock > 0
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {product.stock || 0}
+          </span>
         </td>
 
         <td className="px-6 py-4 text-center text-gray-600">

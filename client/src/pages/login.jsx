@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { login } from "../redux/slices/authSlice";
 import { useNavigate } from "react-router-dom";
@@ -30,7 +30,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md border border-gray-200">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <FaLock className="text-2xl text-white" />
@@ -41,9 +40,7 @@ const Login = () => {
           <p className="text-gray-600">Sign in to your account to continue</p>
         </div>
 
-        {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Email Field */}
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
               Email Address
@@ -61,7 +58,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
               Password
@@ -86,7 +82,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
@@ -107,14 +102,12 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-200"></div>
           <span className="px-4 text-gray-400 text-sm">OR</span>
           <div className="flex-1 h-px bg-gray-200"></div>
         </div>
 
-        {/* Register Link */}
         <p className="text-center text-gray-600">
           Don't have an account?{" "}
           <button

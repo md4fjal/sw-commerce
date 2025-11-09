@@ -44,6 +44,7 @@ RAZORPAY_SECRET=********
 # Shiprocket
 SHIPROCKET_EMAIL=your_shiprocket_email
 SHIPROCKET_PASSWORD=your_shiprocket_password
+
 ```
 
 ### Start the backend server
@@ -60,61 +61,3 @@ npm run dev
 
 - Ensure MongoDB is running locally.
 - Razorpay and Shiprocket keys are required only for payment & shipping workflows.
-
-gt 
-
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
-
-const Header2 = () => {
-  useEffect(() => {
-    const existingScript = document.querySelector(
-      'script[src="https://elfsightcdn.com/platform.js"]'
-    );
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = "https://elfsightcdn.com/platform.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-
-    const hideLink = () => {
-      const parentElements = document.getElementsByClassName("fvkKIs");
-      if (parentElements.length > 0) {
-        Array.from(parentElements).forEach((parent) => {
-          const link = parent.querySelector("a");
-          if (link) {
-            link.style.display = "none";
-          }
-        });
-      } else {
-        setTimeout(hideLink, 500);
-      }
-    };
-
-    hideLink();
-  }, []);
-
-  return (
-    <header className="flex items-center justify-between max-w-7xl mx-auto px-4 py-4">
-      <h1 className="text-gray-800 text-2xl font-bold">
-        <Link to={"/"}>Hello</Link>
-      </h1>
-
-      <nav className="flex items-center gap-4">
-        <Link to={"/about"} className="text-gray-600">
-          About
-        </Link>
-      </nav>
-
-      <div
-        className="elfsight-app-953a0308-bc57-4aa6-8b89-b56d87279184"
-        data-elfsight-app-lazy
-      ></div>
-    </header>
-  );
-};
-
-export default Header2;
-
-

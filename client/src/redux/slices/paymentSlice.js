@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/payment";
+import { server } from "../../main";
 
 const initialState = {
   orders: [],
@@ -17,7 +16,7 @@ export const createRazorpayOrder = createAsyncThunk(
   async ({ token }, { rejectWithValue }) => {
     try {
       const { data } = await axios.post(
-        `${API_URL}/create-order`,
+        `${server}/payment/create-order`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -44,7 +43,7 @@ export const verifyPayment = createAsyncThunk(
   ) => {
     try {
       const { data } = await axios.post(
-        `${API_URL}/verify`,
+        `${server}/payment/verify`,
         {
           razorpay_order_id,
           razorpay_payment_id,
@@ -67,7 +66,7 @@ export const cancelOrder = createAsyncThunk(
   async ({ token, orderId }, { rejectWithValue }) => {
     try {
       const { data } = await axios.put(
-        `${API_URL}/cancel/${orderId}`,
+        `${server}/payment/cancel/${orderId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -85,7 +84,7 @@ export const refundPayment = createAsyncThunk(
   async ({ token, orderId }, { rejectWithValue }) => {
     try {
       const { data } = await axios.put(
-        `${API_URL}/refund/${orderId}`,
+        `${server}/payment/refund/${orderId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -102,7 +101,7 @@ export const getMyOrders = createAsyncThunk(
   "payment/getMyOrders",
   async ({ token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/my-orders`, {
+      const { data } = await axios.get(`${server}/payment/my-orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return data.orders;

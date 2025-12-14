@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/user";
+import { server } from "../../main";
 
 const initialState = {
   users: [],
@@ -33,7 +32,7 @@ export const getAllUsers = createAsyncThunk(
   ) => {
     try {
       const { data } = await axios.get(
-        `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`,
+        `${server}/user?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -51,7 +50,7 @@ export const getUserById = createAsyncThunk(
   "user/getById",
   async ({ id, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API_URL}/${id}`, {
+      const res = await axios.get(`${server}/user/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data.user;
@@ -65,7 +64,7 @@ export const deleteUser = createAsyncThunk(
   "user/delete",
   async ({ id, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.delete(`${API_URL}/${id}`, {
+      const res = await axios.delete(`${server}/user/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return { id, message: res.data.message };
@@ -81,7 +80,7 @@ export const updateProfile = createAsyncThunk(
   "user/updateProfile",
   async ({ data, token }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/profile`, data, {
+      const res = await axios.put(`${server}/user/profile`, data, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data;
@@ -98,7 +97,7 @@ export const toggleRole = createAsyncThunk(
   async ({ id, token }, { rejectWithValue }) => {
     try {
       const res = await axios.put(
-        `${API_URL}/toggle-role`,
+        `${server}/user/toggle-role`,
         { id },
         {
           headers: { Authorization: `Bearer ${token}` },

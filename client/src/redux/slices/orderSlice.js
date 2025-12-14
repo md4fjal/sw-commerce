@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/order";
+import { server } from "../../main";
 
 export const fetchOrders = createAsyncThunk(
   "order/fetchAll",
@@ -18,7 +17,7 @@ export const fetchOrders = createAsyncThunk(
   ) => {
     try {
       const { data } = await axios.get(
-        `${API_URL}/all?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`,
+        `${server}/order/all?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -36,7 +35,7 @@ export const getOrderById = createAsyncThunk(
   "order/fetchById",
   async ({ orderId, token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/${orderId}`, {
+      const { data } = await axios.get(`${server}/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return data;
@@ -51,7 +50,7 @@ export const updateOrderStatus = createAsyncThunk(
   async ({ orderId, status, token }, { rejectWithValue }) => {
     try {
       const { data } = await axios.put(
-        `${API_URL}/status/${orderId}`,
+        `${server}/order/status/${orderId}`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -68,7 +67,7 @@ export const deleteOrder = createAsyncThunk(
   "order/delete",
   async ({ orderId, token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.delete(`${API_URL}/${orderId}`, {
+      const { data } = await axios.delete(`${server}/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return {
@@ -87,7 +86,7 @@ export const fetchOrderStats = createAsyncThunk(
   "order/fetchStats",
   async ({ token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/stats`, {
+      const { data } = await axios.get(`${server}/order/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return data;

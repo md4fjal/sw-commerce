@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/category";
+import { server } from "../../main";
 
 export const fetchCategories = createAsyncThunk(
   "category/fetchAll",
@@ -17,7 +16,7 @@ export const fetchCategories = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      let url = `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
+      let url = `${server}/category?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
       if (parent !== null) {
         url += `&parent=${parent}`;
       }
@@ -35,7 +34,7 @@ export const getCategoryById = createAsyncThunk(
   "category/fetchById",
   async ({ id }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/${id}`);
+      const { data } = await axios.get(`${server}/category/${id}`);
       return data;
     } catch (err) {
       return rejectWithValue(
@@ -49,7 +48,7 @@ export const getCategoryBySlug = createAsyncThunk(
   "category/fetchBySlug",
   async ({ slug }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/slug/${slug}`);
+      const { data } = await axios.get(`${server}/category/slug/${slug}`);
       return data;
     } catch (err) {
       return rejectWithValue(
@@ -63,7 +62,7 @@ export const addCategory = createAsyncThunk(
   "category/add",
   async ({ token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(API_URL, formData, {
+      const res = await axios.post(`${server}/category`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -82,7 +81,7 @@ export const updateCategory = createAsyncThunk(
   "category/update",
   async ({ id, token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/${id}`, formData, {
+      const res = await axios.put(`${server}/category/${id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -101,7 +100,7 @@ export const deleteCategory = createAsyncThunk(
   "category/delete",
   async ({ id, token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.delete(`${API_URL}/${id}`, {
+      const { data } = await axios.delete(`${server}/category/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return { id, message: data?.message || "Category deleted successfully" };

@@ -1,8 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-import { data } from "react-router-dom";
-
-const API_URL = "http://localhost:5000/api/v1/auth";
+import { server } from "../../main";
 
 const initialState = {
   user: null,
@@ -16,7 +14,7 @@ export const register = createAsyncThunk(
   "auth/register",
   async ({ data }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_URL}/register`, data);
+      const res = await axios.post(`${server}/auth/register`, data);
 
       return res.data;
     } catch (error) {
@@ -31,7 +29,7 @@ export const login = createAsyncThunk(
   "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.post(`${API_URL}/login`, {
+      const { data } = await axios.post(`${server}/auth/login`, {
         email,
         password,
       });
@@ -49,7 +47,7 @@ export const fetchMe = createAsyncThunk(
   "auth/fetchMe",
   async ({ token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/me`, {
+      const { data } = await axios.get(`${server}/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -68,7 +66,7 @@ export const changePassword = createAsyncThunk(
   "auth/change-password",
   async ({ token, data }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/change-password`, data, {
+      const res = await axios.put(`${server}/auth/change-password`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

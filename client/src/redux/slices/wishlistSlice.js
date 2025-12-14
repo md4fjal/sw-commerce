@@ -1,13 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/wishlist";
+import { server } from "../../main";
 
 export const fetchWishlist = createAsyncThunk(
   "wishlist/fetchAll",
   async ({ token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/`, {
+      const { data } = await axios.get(`${server}/wishlist/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return data;
@@ -24,7 +23,7 @@ export const addToWishlist = createAsyncThunk(
   async ({ token, productId }, { rejectWithValue }) => {
     try {
       const { data } = await axios.post(
-        `${API_URL}/add`,
+        `${server}/wishlist/add`,
         { productId },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -43,7 +42,7 @@ export const removeFromWishlist = createAsyncThunk(
   "wishlist/remove",
   async ({ token, productId }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.delete(`${API_URL}/remove`, {
+      const { data } = await axios.delete(`${server}/wishlist/remove`, {
         data: { productId },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -66,14 +65,14 @@ export const toggleWishlistItem = createAsyncThunk(
       );
 
       if (isInWishlist) {
-        const { data } = await axios.delete(`${API_URL}/remove`, {
+        const { data } = await axios.delete(`${server}/wishlist/remove`, {
           data: { productId },
           headers: { Authorization: `Bearer ${token}` },
         });
         return { ...data, productId, action: "remove" };
       } else {
         const { data } = await axios.post(
-          `${API_URL}/add`,
+          `${server}/wishlist/add`,
           { productId },
           {
             headers: { Authorization: `Bearer ${token}` },

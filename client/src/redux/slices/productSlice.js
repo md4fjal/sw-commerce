@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/product";
+import { server } from "../../main";
 
 export const fetchProducts = createAsyncThunk(
   "products/fetchAll",
@@ -25,7 +24,7 @@ export const fetchProducts = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      let url = `${API_URL}?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
+      let url = `${server}/product?search=${search}&sortBy=${sortBy}&order=${order}&page=${page}&limit=${limit}`;
 
       // Add optional filters
       if (category) url += `&category=${category}`;
@@ -52,7 +51,7 @@ export const getProductById = createAsyncThunk(
   "products/fetchById",
   async ({ id }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/${id}`);
+      const { data } = await axios.get(`${server}/product/${id}`);
       return data;
     } catch (err) {
       return rejectWithValue(
@@ -66,7 +65,7 @@ export const getProductBySlug = createAsyncThunk(
   "products/fetchBySlug",
   async ({ slug }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.get(`${API_URL}/slug/${slug}`);
+      const { data } = await axios.get(`${server}/product/slug/${slug}`);
       return data;
     } catch (err) {
       return rejectWithValue(
@@ -80,7 +79,7 @@ export const addProduct = createAsyncThunk(
   "products/add",
   async ({ token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(API_URL, formData, {
+      const res = await axios.post(`${server}/product`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -99,7 +98,7 @@ export const updateProduct = createAsyncThunk(
   "products/updateProduct",
   async ({ id, token, formData }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API_URL}/${id}`, formData, {
+      const res = await axios.put(`${server}/product/${id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -118,7 +117,7 @@ export const deleteProduct = createAsyncThunk(
   "products/deleteProduct",
   async ({ id, token }, { rejectWithValue }) => {
     try {
-      const { data } = await axios.delete(`${API_URL}/${id}`, {
+      const { data } = await axios.delete(`${server}/product/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return { id, message: data?.message || "Product deleted successfully" };

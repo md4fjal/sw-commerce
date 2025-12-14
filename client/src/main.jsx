@@ -12,3 +12,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </PersistGate>
   </Provider>
 );
+
+export const server = "https://stylehub-api.vercel.app/api/v1";
+// export const server = "http://localhost:5000/api/v1";

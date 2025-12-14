@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-
-const API_URL = "http://localhost:5000/api/v1/address";
+import { server } from "../../main";
 
 const initialState = {
   billingAddress: null,
@@ -15,7 +14,7 @@ export const fetchAddress = createAsyncThunk(
   "address/fetch",
   async ({ token }, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API_URL}`, {
+      const res = await axios.get(`${server}/address`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data;
@@ -32,7 +31,7 @@ export const updateBillingAddress = createAsyncThunk(
   async ({ data, token }, { rejectWithValue }) => {
     try {
       const res = await axios.put(
-        `${API_URL}/billing`,
+        `${server}/address/billing`,
         { billingAddress: data },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -52,7 +51,7 @@ export const updateShippingAddress = createAsyncThunk(
   async ({ data, token }, { rejectWithValue }) => {
     try {
       const res = await axios.put(
-        `${API_URL}/shipping`,
+        `${server}/address/shipping`,
         { shippingAddress: data },
         {
           headers: { Authorization: `Bearer ${token}` },
